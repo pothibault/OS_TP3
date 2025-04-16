@@ -18,6 +18,10 @@
 class BlockDevice {
 private:
     std::vector<char> disk;
+    const size_t BLOCK_SIZE = 1024; // 1ko
+    const size_t NB_BLOCKS = 64; // 64 blocs
+    const size_t DISK_SIZE = BLOCK_SIZE * NB_BLOCKS;
+
 
 public:
     BlockDevice();
