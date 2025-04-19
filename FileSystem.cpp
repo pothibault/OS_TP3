@@ -52,8 +52,6 @@ bool FileSystem::Create(const std::string &filename, size_t sizeInBytes)
         return false;
     }
 
-    size_t blockSize = device.getBlockSize();
-
     //Calcule le nombre de blocs necessaire
     size_t blockSize = device.getBlockSize();
     size_t nbBlocs = (sizeInBytes + blockSize - 1) / blockSize;
@@ -79,7 +77,45 @@ bool FileSystem::Create(const std::string &filename, size_t sizeInBytes)
 
 bool FileSystem::Write(const std::string &filename, size_t offset, const std::string &data)
 {
-    return false;
+    //Si le nom du file n'existe pas retourne faux
+    if (root.find(filename) == root.end()) {
+        return false;
+    }
+
+
+    const size_t blockSize = device.getBlockSize();
+    Inode &inode = root[filename];
+
+    //Si on essai d'ajouter plus de donner qu'on peut contenir, retourne faux
+    if (offset + data.size() > inode.fileSize) {
+        return false;
+    }
+
+    size_t dataSize = data.size();
+    size_t dataPos = 0;
+    size_t currentOffset = offset;
+
+    //Boucle jusqu'a temps qu'il ne reste plus de donnee a ecrire dans le device
+    while (dataSize > 0) {
+        size_t blockInFile = currentOffset / blockSize;
+        size_t blockOffset = currentOffset % blockSize;
+
+        size_t blockInDevice = inode.blockList[blockInFile];
+
+        char buffer[1024]; // Quand je met blockSize donne une erreur pour une raison
+        device.ReadBlock(blockInDevice, buffer);
+
+        size_t writable = std::min(blockSize - blockOffset, dataSize);
+
+        std::memcpy(buffer + blockOffset, data.data() + dataPos, writable);
+        device.WriteBlock(blockInDevice, buffer);
+
+        dataPos += writable;
+        dataSize -= writable;
+        currentOffset += writable;
+    }
+
+    return true;
 }
 
 

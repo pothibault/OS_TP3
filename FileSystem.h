@@ -33,6 +33,7 @@
  */
 class FileSystem {
 private:
+    //const size_t BLOCK_SIZE = 1024;
     BlockDevice &device;                          // Disque virtuel
     std::vector<bool> freeBitmap;                 // true = libre, false = occupé
     std::unordered_map<std::string, Inode> root;  // Répertoire racine

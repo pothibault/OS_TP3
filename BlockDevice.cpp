@@ -32,3 +32,7 @@ bool BlockDevice::WriteBlock(size_t blockIndex, const char *data) //attention da
     } 
     else {return false;}
 }
+
+
+
+
