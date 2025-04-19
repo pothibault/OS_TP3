@@ -27,5 +27,13 @@ public:
     BlockDevice();
     bool ReadBlock(size_t blockIndex, char* buffer);
     bool WriteBlock(size_t blockIndex, const char* data);
+   
+    size_t getBlockCount() const{
+        return NB_BLOCKS;
+    }
+
+    size_t getBlockSize() const{
+        return BLOCK_SIZE;
+    }
 };
 #endif //BLOCKDEVICE_H

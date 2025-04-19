@@ -17,7 +17,7 @@ int main() {
     assert(okCreate1 && "Echec de la creation de test1.txt");
 
     // Écrire dedans (2 messages)
-    bool okWrite1 = fs.Write("test1.txt", 0, "Bonjour tout le monde!");
+    bool okWrite1 = fs.Write("test1.txt", 0, "Bonjour tout le monde!"); 
     assert(okWrite1 && "Echec ecriture #1 dans test1.txt");
 
     bool okWrite2 = fs.Write("test1.txt", 25, "Suite de texte dans test1.");
