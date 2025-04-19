@@ -1,4 +1,5 @@
 #include "FileSystem.h"
+#include <cstring>
 
 FileSystem::FileSystem(BlockDevice &dev) : device(dev)
 {
@@ -41,6 +42,14 @@ std::vector<size_t> FileSystem::AllocateBlocks(size_t nbBlocs)
 
 void FileSystem::FreeBlocks(const std::vector<size_t> &blocks)
 {
+    //Clear the data in each of the blocks
+    for(size_t block : blocks){
+        freeBitmap[block] = true;
+    
+        //Placer tout les char occuper a 0
+        char zero[1024] = {0};
+        device.WriteBlock(block, zero);
+    }
 }
 
 
@@ -129,7 +138,17 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
 
 bool FileSystem::Delete(const std::string &filename)
 {
-    return false;
+    if(root.find(filename) == root.end()){
+        return false;
+    }
+
+    //Clear the data in each of the blocks
+    Inode &inode = root[filename];
+    FreeBlocks(inode.blockList);
+
+    root.erase(filename);
+
+    return true;
 }
 
 
