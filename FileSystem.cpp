@@ -131,8 +131,47 @@ bool FileSystem::Write(const std::string &filename, size_t offset, const std::st
 
 bool FileSystem::Read(const std::string &filename, size_t offset, size_t length, std::string &outData)
 {
-    return false;
+    // Vérifier si le fichier existe
+    if (root.find(filename) == root.end()) {
+        return false;
+    }
+
+    Inode &inode = root[filename];
+    size_t blockSize = device.getBlockSize();
+
+    // Vérifier que la lecture ne dépasse pas la taille du fichier
+    if (offset + length > inode.fileSize) {
+        return false;
+    }
+
+    outData.clear(); // S'assurer que outData est vide
+    size_t remaining = length;
+    size_t currentOffset = offset;
+
+    //On boucle jusqu'à la fin
+    while (remaining > 0) {
+        size_t blockInFile = currentOffset / blockSize;
+        size_t blockOffset = currentOffset % blockSize;
+        size_t blockInDevice = inode.blockList[blockInFile];
+
+        char buffer[1024]; // Assumé 1 Ko
+        if (!device.ReadBlock(blockInDevice, buffer)) {
+            return false; // Erreur de lecture
+        }
+
+        // Nombre d'octets qu'on peut lire à partir du bloc courant
+        size_t readable = std::min(blockSize - blockOffset, remaining);
+
+        // Ajouter les octets lus à outData
+        outData.append(buffer + blockOffset, readable);
+
+        remaining -= readable;
+        currentOffset += readable;
+    }
+
+    return true;
 }
+
 
 
 
