@@ -145,11 +145,11 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
     }
 
     outData.clear(); // S'assurer que outData est vide
-    size_t remaining = length;
+    size_t restant = length;    
     size_t currentOffset = offset;
 
     //On boucle jusqu'à la fin
-    while (remaining > 0) {
+    while (restant > 0) {
         size_t blockInFile = currentOffset / blockSize;
         size_t blockOffset = currentOffset % blockSize;
         size_t blockInDevice = inode.blockList[blockInFile];
@@ -160,12 +160,12 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
         }
 
         // Nombre d'octets qu'on peut lire à partir du bloc courant
-        size_t readable = std::min(blockSize - blockOffset, remaining);
+        size_t readable = std::min(blockSize - blockOffset, restant);
 
         // Ajouter les octets lus à outData
         outData.append(buffer + blockOffset, readable);
 
-        remaining -= readable;
+        restant -= readable;
         currentOffset += readable;
     }
 
@@ -194,4 +194,15 @@ bool FileSystem::Delete(const std::string &filename)
 
 void FileSystem::List()
 {
+    std::cout << "Liste des fichiers :" << std::endl;
+    //Parcourt fichiers du répertoire root
+    //Pour chaque i-node, affiche : nom du fichier, taille et blocs alloués
+    for (const auto &entry : root) {
+        const Inode &inode = entry.second;
+        std::cout << " Nom - " << inode.fileName
+                  << " : taille " << inode.fileSize
+                  << ", nbBlocs=" << inode.blockList.size()
+                  << std::endl;
+    }
 }
+
