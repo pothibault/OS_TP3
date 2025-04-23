@@ -11,6 +11,7 @@ FileSystem::FileSystem(BlockDevice &dev) : device(dev)
 
 void FileSystem::Compact()
 {
+    
 }
 
 
@@ -20,22 +21,21 @@ std::vector<size_t> FileSystem::AllocateBlocks(size_t nbBlocs)
     std::vector<size_t> result;
 
     //Boucle a travers le bitmap pour trouver des espaces libre
-    for(size_t i = 0; i < freeBitmap.size(); i++){
+    for(size_t i = 0; i < freeBitmap.size() && result.size() < nbBlocs; i++){
         if(freeBitmap[i]){
             result.push_back(i);
-            freeBitmap[i] = false;
         }
 
-        if(result.size() == nbBlocs){
-            return result; //Retourne la liste de bloc si nous avons trouvez tout les place
+        if(result.size() != nbBlocs){
+            return {}; //Retourne le vecteur vide si nous n'avons pas assez de blocs libres
         }
 
     }
-    for(size_t i : result){ // Si nous ne trouvons pas assez de place, on remet les place a true puisqu'il ne sont pas utiliser
-        freeBitmap[i] = true; 
+    for(size_t i : result){ // Mettre les valeurs a false pour marquer les blocs comme occuper
+        freeBitmap[i] = false; 
     }
 
-    return {};
+    return result;
 }
 
 
