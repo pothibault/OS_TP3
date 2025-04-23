@@ -38,6 +38,14 @@ private:
     std::vector<bool> freeBitmap;                 // true = libre, false = occupé
     std::unordered_map<std::string, Inode> root;  // Répertoire racine
 
+    struct Move 
+    {
+        size_t oldIndex;
+        Inode* inode;  //pointeur vers l'inode
+        size_t posInList;      //position dans inode -> blockList  
+    };
+    
+
 public:
     // Constructeur : initialiser freeBitmap
     FileSystem(BlockDevice &dev);

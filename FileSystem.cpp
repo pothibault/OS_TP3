@@ -1,5 +1,6 @@
 #include "FileSystem.h"
 #include <cstring>
+#include <algorithm>
 
 FileSystem::FileSystem(BlockDevice &dev) : device(dev)
 {
@@ -11,7 +12,55 @@ FileSystem::FileSystem(BlockDevice &dev) : device(dev)
 
 void FileSystem::Compact()
 {
+    std::cout << "=== Debut de la compaction du disque ===" << std::endl;
+    const size_t blockSize = device.getBlockSize();
+    std::vector<char> buf(blockSize);
+
+    std::vector<Move> moves;
+    moves.reserve(freeBitmap.size());
+
+
+    //Preparer un vecteur des blocs avec leur position en ce moment
+    for (auto &file : root) {
+        Inode &inode = file.second;
+        for (size_t i = 0; i < inode.blockList.size(); i++) {
+            moves.push_back({inode.blockList[i], &inode, i});
+        }
+    }
+
+    //Trier les positions des blocs
+    std::sort(moves.begin(), moves.end(),
+                [](const Move &a, const Move &b) { return a.oldIndex < b.oldIndex; });
+
+    size_t nextFree = 0;
+
+    for (Move &m : moves) {
+
+        if (m.oldIndex != nextFree) {
+            //Lire l'ancien bloc
+            device.ReadBlock(m.oldIndex, buf.data());
+
+            //Ecrire au nouvel emplacement compacter
+            device.WriteBlock(nextFree, buf.data());
+
+            //Mise a jour du bitmap
+            freeBitmap[m.oldIndex] = true;
+            freeBitmap[nextFree] = false;
+
+        }
+
+        //Mise a jour position dans inode blocklist
+        m.inode->blockList[m.posInList] = nextFree;
+
+        ++nextFree; //prochaine case libre
+    }
+
+    //Mettre le reste du bitmap libre
+    for(size_t i = nextFree; i < freeBitmap.size(); i++) {
+        freeBitmap[i] = true;
+    }
     
+    std::cout << "=== Fin de la compaction. nextFreeBlock = " << nextFree << " ===" << std::endl;
 }
 
 
@@ -26,11 +75,12 @@ std::vector<size_t> FileSystem::AllocateBlocks(size_t nbBlocs)
             result.push_back(i);
         }
 
-        if(result.size() != nbBlocs){
-            return {}; //Retourne le vecteur vide si nous n'avons pas assez de blocs libres
-        }
-
     }
+
+    if(result.size() != nbBlocs){
+        return {}; //Retourne le vecteur vide si nous n'avons pas assez de blocs libres
+    }
+
     for(size_t i : result){ // Mettre les valeurs a false pour marquer les blocs comme occuper
         freeBitmap[i] = false; 
     }
@@ -93,6 +143,7 @@ bool FileSystem::Write(const std::string &filename, size_t offset, const std::st
 
 
     const size_t blockSize = device.getBlockSize();
+    std::vector<char> buf(blockSize);
     Inode &inode = root[filename];
 
     //Si on essai d'ajouter plus de donner qu'on peut contenir, retourne faux
@@ -111,13 +162,13 @@ bool FileSystem::Write(const std::string &filename, size_t offset, const std::st
 
         size_t blockInDevice = inode.blockList[blockInFile];
 
-        char buffer[1024]; // Quand je met blockSize donne une erreur pour une raison
-        device.ReadBlock(blockInDevice, buffer);
+        
+        device.ReadBlock(blockInDevice, buf.data());
 
         size_t writable = std::min(blockSize - blockOffset, dataSize);
 
-        std::memcpy(buffer + blockOffset, data.data() + dataPos, writable);
-        device.WriteBlock(blockInDevice, buffer);
+        std::memcpy(buf.data() + blockOffset, data.data() + dataPos, writable);
+        device.WriteBlock(blockInDevice, buf.data());
 
         dataPos += writable;
         dataSize -= writable;
@@ -138,6 +189,7 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
 
     Inode &inode = root[filename];
     size_t blockSize = device.getBlockSize();
+    std::vector<char> buf(blockSize);
 
     // Vérifier que la lecture ne dépasse pas la taille du fichier
     if (offset + length > inode.fileSize) {
@@ -154,8 +206,7 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
         size_t blockOffset = currentOffset % blockSize;
         size_t blockInDevice = inode.blockList[blockInFile];
 
-        char buffer[1024]; // Assumé 1 Ko
-        if (!device.ReadBlock(blockInDevice, buffer)) {
+        if (!device.ReadBlock(blockInDevice, buf.data())) {
             return false; // Erreur de lecture
         }
 
@@ -163,7 +214,7 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
         size_t readable = std::min(blockSize - blockOffset, restant);
 
         // Ajouter les octets lus à outData
-        outData.append(buffer + blockOffset, readable);
+        outData.append(buf.data() + blockOffset, readable);
 
         restant -= readable;
         currentOffset += readable;
