@@ -243,6 +243,7 @@ bool FileSystem::Delete(const std::string &filename)
 
 
 
+
 void FileSystem::List()
 {
     std::cout << "Liste des fichiers :" << std::endl;
@@ -250,8 +251,8 @@ void FileSystem::List()
     //Pour chaque i-node, affiche : nom du fichier, taille et blocs alloués
     for (const auto &entry : root) {
         const Inode &inode = entry.second;
-        std::cout << " Nom - " << inode.fileName
-                  << " : taille " << inode.fileSize
+        std::cout << " - " << inode.fileName
+                  << " : size " << inode.fileSize
                   << ", nbBlocs=" << inode.blockList.size()
                   << std::endl;
     }
