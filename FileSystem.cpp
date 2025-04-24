@@ -128,7 +128,8 @@ bool FileSystem::Create(const std::string &filename, size_t sizeInBytes)
     inode.blockList = allocatedBlocs;
 
     root[filename] = inode;
-    
+    // Affichage 
+    std::cout << "Fichier " << filename << " cree, taille " << sizeInBytes << " octets, blocs alloues = " << nbBlocs << std::endl;
     return true;
 }
 
@@ -174,6 +175,7 @@ bool FileSystem::Write(const std::string &filename, size_t offset, const std::st
         dataSize -= writable;
         currentOffset += writable;
     }
+    std::cout << "Write dans " << filename << " (" << data.size() << " octets) " << std::endl;
 
     return true;
 }
@@ -196,11 +198,11 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
         return false;
     }
 
-    outData.clear(); // S'assurer que outData est vide
-    size_t restant = length;    
+    outData.clear();
+    size_t restant = length;
     size_t currentOffset = offset;
 
-    //On boucle jusqu'à la fin
+    // Boucle principale
     while (restant > 0) {
         size_t blockInFile = currentOffset / blockSize;
         size_t blockOffset = currentOffset % blockSize;
@@ -210,18 +212,20 @@ bool FileSystem::Read(const std::string &filename, size_t offset, size_t length,
             return false; // Erreur de lecture
         }
 
-        // Nombre d'octets qu'on peut lire à partir du bloc courant
         size_t readable = std::min(blockSize - blockOffset, restant);
-
-        // Ajouter les octets lus à outData
+        // Ajout à la sortie
         outData.append(buf.data() + blockOffset, readable);
 
         restant -= readable;
         currentOffset += readable;
     }
 
+    // Affichage 
+    std::cout << "Read dans " << filename << " (" << length << " octets)" << std::endl;
+
     return true;
 }
+
 
 
 
@@ -237,7 +241,8 @@ bool FileSystem::Delete(const std::string &filename)
     FreeBlocks(inode.blockList);
 
     root.erase(filename);
-
+    //Affichage
+    std::cout << "Fichier " << filename << " supprime " << std::endl;
     return true;
 }
 
@@ -247,13 +252,24 @@ bool FileSystem::Delete(const std::string &filename)
 void FileSystem::List()
 {
     std::cout << "Liste des fichiers :" << std::endl;
-    //Parcourt fichiers du répertoire root
-    //Pour chaque i-node, affiche : nom du fichier, taille et blocs alloués
-    for (const auto &entry : root) {
-        const Inode &inode = entry.second;
-        std::cout << " - " << inode.fileName
-                  << " : size " << inode.fileSize
-                  << ", nbBlocs=" << inode.blockList.size()
+
+    // Créer une liste des inodes à partir de la map
+    std::vector<const Inode*> inodes;
+    for (const auto& entry : root) {
+        inodes.push_back(&entry.second);
+    }
+
+    // Trier les inodes dans la liste selon taille croissante
+    std::sort(inodes.begin(), inodes.end(),
+              [](const Inode* a, const Inode* b) {
+                  return a->fileSize < b->fileSize;
+              });
+
+    // Afficher le contenu trié de la liste
+    for (const Inode* inode : inodes) {
+        std::cout << " - " << inode->fileName
+                  << " : size " << inode->fileSize
+                  << ", nbBlocs=" << inode->blockList.size()
                   << std::endl;
     }
 }
